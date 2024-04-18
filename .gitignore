@@ -47,3 +47,24 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+# Specific Data
+# Ignore data files with specific extensions in the Data folder
+data/
+credentials/
+docs/
+
+*.shp
+*.parquet
+*.qs
+*.csv
+*.rds
+*.gpkg
+*.html
+
+
+
+
+
+
+
