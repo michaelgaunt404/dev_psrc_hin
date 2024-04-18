@@ -1,0 +1,200 @@
+---
+title: "Database Exploration Tool"
+subtitle: "Details NYCDOT database tables and attributes"
+author: "Mike Gaunt"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    toc: TRUE
+    toc_float:
+      collapsed: true
+---
+
+```{r setup, include=FALSE}
+# knitr::opts_chunk$set(echo = FALSE, out.width = "100%")
+knitr::opts_chunk$set(
+  cache = FALSE, cache.lazy = FALSE, autodep = TRUE, warning = FALSE,
+  message = FALSE, echo = TRUE, dpi = 180,
+  fig.width = 5, fig.height = 3, echo = FALSE
+  )
+```
+
+```{css, echo=FALSE}
+body .main-container {
+max-width: auto;
+margin-left: 5%; /* Replace with your desired value */
+margin-right: 5%; /* Center the content horizontally */
+}
+```
+
+<!--#general comments===========================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# This is [[insert description here - what it does/solve]]
+#
+# By: mike gaunt, michael.gaunt@wsp.com
+#
+# README: this markdowns sources a script that connects to database and extracts data
+#-------- Rmakrdown basically prints objects made in that script 
+#
+# *please use 80 character margins
+# *please go to https://pkgs.rstudio.com/flexdashboard/articles/layouts.html
+# to explore the different layouts available for the flexdashboard framework
+#
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+<!--#library set-up=============================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#content in this section should be removed if in production - ok for dev -->
+```{r}
+library(tidyverse)
+```
+
+<!--#source helpers/utilities===================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#content in this section should be removed if in production - ok for dev -->
+```{r}
+source(here::here("code", "script_quantify_table_null_cols.r"))
+```
+
+
+<!--#source data================================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#content in this section should be removed if in production - ok for dev 
+#area to upload data with and to perform initial munging
+#please add test data here so that others may use/unit test these scripts -->
+
+<!--#SECTION NAME===============================================================
+#use this header to make demarcations/section in code [delete this line]
+#short description -->
+
+## Database Overview
+
+This document is intended to briefly detail the NYCDOT DB database in a format that is interactive and easily accessible.
+
+It can be used in two ways:
+
++ To describe aspects of the database 
++ To inform the SQL work
+
+## Tables and Table Attibutes 
+
+Current list of tables in database:
+```{r}
+tmp_table = table_attributes %>% 
+  select(table, record_count) %>% 
+  unique() 
+
+tmp_table %>%  
+  reactable( defaultPageSize = 1000, filterable = TRUE, height = 270, width = 400
+               ,striped = T, highlight = T, bordered = F, fullWidth = F
+               ,wrap = FALSE, resizable = TRUE, compact = F)
+```
+    
+<details>
+<summary>Notes: Click to Expand</summary>
+
+Potential Class Imbalance for ML models  
+
++ Many more accidents than fatalities 
++ Fatalities account for ``r 100*(tmp_table[tmp_table$table == "fatal_crash", 'record_count']/(tmp_table[tmp_table$table == "wc_accident_f", 'record_count']+tmp_table[tmp_table$table == "fatal_crash", 'record_count']))`` of all incidents (fatalities + accidents)
++ Any sort of logistic regression/classification model we deploy will likely be biased towards the majority class
+  + Poor predictive performance for the minority class
+  + Low accuracy rate, high false negatives for the minority class, and a high false positive rate for the majority class   
++ Example model: Modeling if driver will be involved in a fatal accident [Y/N] given prior driving history
++ This won't impact simpler statistics like T.tests, etc      
+    
+</details>   
+
+### Fuzzy Attribute Matching
+
+Attribute naming conventions change across fatality and accident tables.
+
+Attributes of the following tables detailed: 
+
++ fatal_% tables
++ wc_accident_% tables
+
+```{r fig.width=5}
+fuzzy_attribute_matching_tbl
+```
+
+
+## Quantifing table attribute Nulls
+
+Null values calculated for the following tables: 
+
+```{r}
+unique(database_table_nulls$table) %>%  sort()
+```
+
+```{r}
+crsstlk_tble_1
+```
+
+### Attribute Nulls by Accident Year {.tabset}
+
+The plots below detail table attributes' Null counts by accident occurrence year.
+
++ I noticed that many attributes had a large number of NULLs
++ If 100% null then throw away, attributes with low NULL PCT 0-20% may be due to random bad data collection practices 
++ Main concern was for attributes in middle range of NULL PCT 40-60%
+  + Potential for large systematic changes in data collection practices over time 
+  
+**NOTE:** This was performed only on two tables, the year/date attributes wildly across tables as well as requireing different levels of post processing. If this is helpful I can extend it to other tables.
+  
+#### Fatal_crash
+```{r fig.height=3, fig.width=5, dpi = 300}
+processed_year_nulls_plots[[1]]
+```
+
+#### Fatal_vehicle
+```{r fig.height=3, fig.width=5, dpi = 300}
+processed_year_nulls_plots[[2]]
+```
+
+#### Fatal_victim
+```{r fig.height=3, fig.width=5, dpi = 300}
+processed_year_nulls_plots[[3]]
+```
+
+#### WC_accident_
+```{r fig.height=3, fig.width=5, dpi = 300}
+processed_year_nulls_plots[[4]]
+```
+
+#### WC_accident_vehicle
+```{r fig.height=3, fig.width=5, dpi = 300}
+processed_year_nulls_plots[[5]]
+```
+
+#### WC_accident_victim
+```{r fig.height=3,, fig.width=5, dpi = 300}
+processed_year_nulls_plots[[6]]
+```
+
+### {-}
+
+<details>
+<summary>Notes: Click to Expand</summary>  
+
+Systemic attribute NULLS
+
++ 
++ Evidence of pretty large changes in data collection practices resulting in decades worth of Nulls for certain attributes
+  + Some of the these attributes look like they are meta-data attributes - e.g. modified_by, these can be ignored
+  + Others more of an issue - e.g. p_conviction/P_suspension, fault, DWI, plate_num, num_p_conviction
+    + These are more relevant to the analysis and Nulls much more detrimental 
++ Potentially complicate modeling efforts downstream
+  + Nulls will have to be removed or imputed
+  + Or use modeling method that can handle nulls - e.g. Random Forrest but methods like this are more non-parametric 
+   
+</details> 
+
+
+
+
+
+
+
+
